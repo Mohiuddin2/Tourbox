@@ -1,22 +1,19 @@
 const mongoose = require("mongoose");
+const passportLocalMongoose = require("passport-local-mongoose");
 const Schema = mongoose.Schema;
 
-const userSchema = new Schema({
-  username: {
-    type: String,
-    required: true,
-  },
+const UserSchema = new Schema({
   email: {
     type: String,
     required: true,
     unique: true,
   },
-  password: {
-    type: String,
-    required: true,
-  },
 });
 
-const User = mongoose.model("User", userSchema);
+// UserSchema.plugin(passportLocalMongoose)
+//I have to define if I want use usernameField as email as bellow
+UserSchema.plugin(passportLocalMongoose,
+  { usernameField : 'email'});
 
-module.exports = User;
+module.exports = mongoose.model("User", UserSchema);
+

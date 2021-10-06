@@ -2,22 +2,60 @@ const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
 const session = require("express-session")
+const flash = require("connect-flash");
 const MongodbSession = require('connect-mongodb-session')(session)
 const path = require("path");
 const ejsMate = require("ejs-mate");
-const { campgroundSchema, reviewSchema } = require("./schemas.js"); // Joi Server side validation
+// const { campgroundSchema, reviewSchema } = require("./schemas.js"); // Joi Server side validation
 const catchAsync = require("./utility/catchAsync");
 const ExpressError = require("./utility/ExpressError");
 const methodOverride = require("method-override");
-const Campground = require("./models/campground");
-const bcrypt = require("bcrypt")
-const Review = require("./models/review");
-const { expression } = require('joi');
-
-app.use(express.static(path.join(__dirname, "public")));
-
 const User = require("./models/user");
+const { expression } = require('joi');
+const passport = require("passport");
+const LocalStrategy = require("passport-local");
 
+
+
+const campgroundsRoute = require('./routes/campground')
+const reviewsRoute = require('./routes/reviews')
+const userRoute = require('./routes/userRoute')
+
+// For connect flash must follow this secuencial order-- accor. to doc pass.. initialize will be after session as bellow
+app.use(session({
+  secret:"YelcampSecret",
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    httpOnly: true,
+    expires:Date.now() + 1000*60*60*24*7, 
+    maxAge: 1000*60*60*24*7,
+  }
+}))
+// Connect-flash must follow order-- before router and flas.. app use
+app.use(flash());
+// passport will be here--
+app.use(passport.initialize());
+app.use(passport.session());
+// passport.use(new LocalStrategy(User.authenticate()))
+
+passport.use(new LocalStrategy({
+  usernameField: 'email',
+  passwordField: 'password'
+},User.authenticate()
+));
+
+
+passport.serializeUser(User.serializeUser()) // for how do we store user in the session
+passport.deserializeUser(User.deserializeUser()) // for removing user form session
+
+app.use((req,res, next) => {
+  console.log(req.session)
+  res.locals.currentUser = req.user, // this for session logged in or for
+  res.locals.success = req.flash('success');
+  res.locals.error = req.flash('error');
+  next();
+})
 // 
 const mongoURI = "mongodb://localhost:27017/yelp-camp"
 //connect mongoose
@@ -30,6 +68,7 @@ db.on("error", console.error.bind(console, "Connection error:"));
 db.once("open", () => {
   console.log("Database Connected");
 });
+
 // mongodb session
 const store = new MongodbSession({
   uri: mongoURI,
@@ -40,9 +79,14 @@ const store = new MongodbSession({
 app.engine("ejs", ejsMate);
 app.set("view engine", "ejs"); // setting ejs view engine
 app.set("views", path.join(__dirname, "views"));
-
+app.use(express.static(path.join(__dirname, "public")));
 app.use(express.urlencoded({ extended: true }));
 app.use(methodOverride("_method"));
+
+// Router
+app.use('/', userRoute);
+app.use('/campgrounds', campgroundsRoute)
+app.use('/campgrounds/:id/reviews', reviewsRoute)
 
 const sessionconfig = {
   secret: 'High_secrete',
@@ -62,69 +106,6 @@ res.redirect("/login")
 }
 }
 
-// server side validator middleware function
-const validateCampground = (req, res, next) => {
-  const { error } = campgroundSchema.validate(req.body);
-  if (error) {
-    const msg = error.details.map((el) => el.message).join(",");
-    throw new ExpressError(msg, 400);
-  } else {
-    next();
-  }
-};
-const validateReview = (req, res, next) => {
-  const {error} = reviewSchema.validate(req.body);
-  console.log(error)
-  if(error){const msg = error.details.map(el) = el.message.join(",");
-  throw new ExpressError(msg, 400)
-  } else{
-    next();
-  }
-  };
-// register
-app.get("/register", (req, res) => {
-console.log("Regster")
-  res.render("register");
-});
-
-// Register
-app.post('/register', catchAsync(async(req, res) => {
-const {username, email, password} = req.body;
-
-let user = await User.findOne({email});
-
-if(user){
-  return res.redirect("/login")
-}
-const hashedPsw = await bcrypt.hash(password, 12)
-user = new User({
-  username,
-  email,
-  password: hashedPsw
-}) 
-await user.save();
-res.redirect("/login")
-}))
-
-app.get("/login", async(req, res) => {
-  res.render("login")
-})
-// Login
-app.post('/login', catchAsync(async(req, res) => {
-const {email, password} = req.body;
- 
-const user = await User.findOne({email});
-if(!user){
-  return res.redirect("/register")
-}
- const isMatch = await bcrypt.compare(password, user.password);
-if(!isMatch){
-  return res.redirect("/login")
-}
-console.log("Loggint=gggg")
-req.session.isAuth = true;
-res.redirect('/campgrounds')
-}))
 // Logout
 app.post('/logout', (req, res) => {
   req.session.destroy((err) => {
@@ -139,84 +120,8 @@ app.get("/", isAuth, (req, res) => {
   res.render("home");
 });
 
+// This is mystry I need add this on project
 
-
-app.get(
-  "/campgrounds", isAuth,
-  catchAsync(async (req, res) => {
-    const campgrounds = await Campground.find({});
-    res.render("campgrounds/index", { campgrounds });
-  })
-);
-app.get("/campgrounds/new", isAuth, (req, res) => {
-  res.render("campgrounds/new");
-});
-
-app.post(
-  "/campgrounds",
-  validateCampground,
-  catchAsync(async (req, res, next) => {
-    const campground = new Campground(req.body.campground);
-    await campground.save();
-    res.redirect(`/campgrounds/${campground._id}`);
-  })
-);
-
-//show
-app.get(
-  "/campgrounds/:id",
-  catchAsync(async (req, res) => {
-    const campground = await Campground.findById(req.params.id).populate("reviews");
-    console.log(campground)
-    res.render("campgrounds/show", { campground });
-  })
-);
-
-app.get(
-  "/campgrounds/:id/edit",
-  catchAsync(async (req, res) => {
-    const campground = await Campground.findById(req.params.id);
-    res.render("campgrounds/edit", { campground });
-  })
-);
-// for updating campg
-app.put(
-  "/campgrounds/:id",
-  validateCampground,
-  catchAsync(async (req, res) => {
-    const { id } = req.params;
-    const campground = await Campground.findByIdAndUpdate(id, {
-      ...req.body.campground,
-    });
-    res.redirect(`/campgrounds/${campground._id}`);
-  })
-);
-
-app.delete(
-  "/campgrounds/:id",
-  catchAsync(async (req, res) => {
-    const { id } = req.params;
-    await Campground.findByIdAndDelete(id);
-    res.redirect("/campgrounds");
-  })
-);
-//for review POST sec 46 v-3 for review group
-app.post('/campgrounds/:id/reviews', validateReview, catchAsync(async(req, res) => {
-  const campground = await Campground.findById(req.params.id);
-  const review = new Review(req.body.review);
-  campground.reviews.push(review)
-  await campground.save();
-  await review.save();
-  res.redirect(`/campgrounds/${campground._id}`)
-}));
-
-// Delete 46 v 7
-app.delete('/campgrounds/:id/reviews/:id', catchAsync(async(req, res) =>{
-  const {id, reviewId} = req.params;
-  await Campground.findByIdAndUpdate(id, {$pull: {reviews: reviewId}})
-  await Review.findByIdAndDelete(reviewId)
-  res.redirect(`/campgrounds/${id}`)
-}))
 
 app.all("*", (req, res, next) => {
   next(new ExpressError("Page Not Found", 404));
