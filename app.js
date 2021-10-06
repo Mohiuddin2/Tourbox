@@ -40,7 +40,7 @@ app.use(passport.session());
 // passport.use(new LocalStrategy(User.authenticate()))
 
 passport.use(new LocalStrategy({
-  usernameField: 'email',
+  usernameField: 'username',
   passwordField: 'password'
 },User.authenticate()
 ));
@@ -50,7 +50,7 @@ passport.serializeUser(User.serializeUser()) // for how do we store user in the 
 passport.deserializeUser(User.deserializeUser()) // for removing user form session
 
 app.use((req,res, next) => {
-  console.log(req.session)
+  // console.log(req.session)
   res.locals.currentUser = req.user, // this for session logged in or for
   res.locals.success = req.flash('success');
   res.locals.error = req.flash('error');
@@ -123,16 +123,16 @@ app.get("/", isAuth, (req, res) => {
 // This is mystry I need add this on project
 
 
-app.all("*", (req, res, next) => {
-  next(new ExpressError("Page Not Found", 404));
-});
+// app.all("*", (req, res, next) => {
+//   next(new ExpressError("Page Not Found", 404));
+// });
 
-// default error handler..
-app.use((err, req, res, next) => {
-  const { statusCode = 500 } = err;
-  if (!err.message) err.message = "Saomething Went Wrong";
-  res.status(statusCode).render("error", { err });
-});
+// // default error handler..
+// app.use((err, req, res, next) => {
+//   const { statusCode = 500 } = err;
+//   if (!err.message) err.message = "Saomething Went Wrong";
+//   res.status(statusCode).render("error", { err });
+// });
 
 app.listen(5000, () => {
   console.log("Serving on port 5000");

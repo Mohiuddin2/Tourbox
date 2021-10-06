@@ -10,10 +10,10 @@ const UserSchema = new Schema({
   },
 });
 
-// UserSchema.plugin(passportLocalMongoose)
+UserSchema.plugin(passportLocalMongoose)
 //I have to define if I want use usernameField as email as bellow
-UserSchema.plugin(passportLocalMongoose,
-  { usernameField : 'email'});
+// UserSchema.plugin(passportLocalMongoose,
+//   { usernameField : 'username'});
 
 module.exports = mongoose.model("User", UserSchema);
 

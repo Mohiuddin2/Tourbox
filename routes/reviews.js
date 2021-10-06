@@ -5,21 +5,14 @@ const { reviewSchema} = require("../schemas.js"); // Joi Server side validation
 const ExpressError = require("../utility/ExpressError");
 const Review = require("../models/review");
 const Campground = require("../models/campground");
+const {validateReview, isLoggedIn, isReviewAuthor} = require('../middleware')
 
-const validateReview = (req, res, next) => {
-    const {error} = reviewSchema.validate(req.body);
-    console.log(error)
-    if(error){const msg = error.details.map(el) = el.message.join(",");
-    throw new ExpressError(msg, 400)
-    } else{
-      next();
-    }
-    };
 
 //for review POST sec 46 v-3 for review group
-router.post('/', validateReview, catchAsync(async(req, res) => {
+router.post('/', isLoggedIn, validateReview, catchAsync(async(req, res) => {
     const campground = await Campground.findById(req.params.id);
     const review = new Review(req.body.review);
+    review.author = req.user.id; // for saving/detecting current user
     campground.reviews.push(review)
     await campground.save();
     await review.save();
@@ -28,7 +21,7 @@ router.post('/', validateReview, catchAsync(async(req, res) => {
   }));
   
   // Delete 46 v 7
-  router.delete('/:reviewId', catchAsync(async(req, res) =>{
+  router.delete('/:reviewId', isLoggedIn, isReviewAuthor, catchAsync(async(req, res) =>{
     const {id, reviewId } = req.params;
     await Campground.findByIdAndUpdate(id, {$pull: {reviews: reviewId}})
     await Review.findByIdAndDelete(reviewId)
