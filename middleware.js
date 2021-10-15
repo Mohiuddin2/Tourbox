@@ -1,6 +1,6 @@
 const  { campgroundSchema, reviewSchema } = require('./schemas.js'); // for joi validation
 const ExpressError = require('./utility/ExpressError');
-const campground = require('./models/campground');
+const Campground = require('./models/campground');
 const Review = require('./models/review');
 module.exports.isLoggedIn = (req, res, next) => {
     if(!req.isAuthenticated()){ //isAuthenticated method from passport
@@ -25,15 +25,14 @@ module.exports.validateCampground = (req, res, next) => {
 
 // Middleware is Auther
 module.exports.isAuthor = async (req, res, next) => {
-  const {id} = req.params;
-  const campground = await Campground.findById(id)
-  if(!campground.author.equals(req.user.id)){
-  req.flash('error', "You do not have permission to do")
-  return res.redirect(`/campgrounds/${id}`)
+  const { id } = req.params;
+  const campground = await Campground.findById(id);
+  if (!campground.author.equals(req.user._id)) {
+      req.flash('error', 'You do not have permission to do that!');
+      return res.redirect(`/campgrounds/${id}`);
   }
-  next()
+  next();
 }
-
 module.exports.validateReview = (req, res, next) => {
   const {error} = reviewSchema.validate(req.body);
   console.log(error)

@@ -6,27 +6,12 @@ const ExpressError = require("../utility/ExpressError");
 const Review = require("../models/review");
 const Campground = require("../models/campground");
 const {validateReview, isLoggedIn, isReviewAuthor} = require('../middleware')
-
+const reveiwController = require('../controllers/reviews')
 
 //for review POST sec 46 v-3 for review group
-router.post('/', isLoggedIn, validateReview, catchAsync(async(req, res) => {
-    const campground = await Campground.findById(req.params.id);
-    const review = new Review(req.body.review);
-    review.author = req.user.id; // for saving/detecting current user
-    campground.reviews.push(review)
-    await campground.save();
-    await review.save();
-    req.flash('success', 'Review Created')
-    res.redirect(`/campgrounds/${campground._id}`)
-  }));
+router.post('/', isLoggedIn, validateReview, catchAsync(reveiwController.createReveiw));
   
-  // Delete 46 v 7
-  router.delete('/:reviewId', isLoggedIn, isReviewAuthor, catchAsync(async(req, res) =>{
-    const {id, reviewId } = req.params;
-    await Campground.findByIdAndUpdate(id, {$pull: {reviews: reviewId}})
-    await Review.findByIdAndDelete(reviewId)
-    req.flash('success', 'Review Deleted!')
-    res.redirect(`/campgrounds/${id}`)
-  }))
+  // Delete 46 v 7 Delete
+  router.delete('/:reviewId', isLoggedIn, isReviewAuthor, catchAsync(reveiwController.reviewDelete))
   
   module.exports = router

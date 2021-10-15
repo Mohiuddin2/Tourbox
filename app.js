@@ -1,3 +1,9 @@
+// if (process.env.NODE_ENV !== "production") {
+//   require('dotenv').config();
+// }
+
+console.log(process.env.Api_Key)
+
 const express = require("express");
 const app = express();
 const mongoose = require("mongoose");
@@ -14,12 +20,18 @@ const User = require("./models/user");
 const { expression } = require('joi');
 const passport = require("passport");
 const LocalStrategy = require("passport-local");
+const dotenv = require('dotenv');
+const Razorpay = require('razorpay')
+dotenv.config();
 
+//instantiate Razorpay
+var instance = new Razorpay({  key_id: 'rzp_test_ngxOrke35Nhg0f',  key_secret: '7ZCezd6WzC55NKyZgePAjWER'});
 
 
 const campgroundsRoute = require('./routes/campground')
 const reviewsRoute = require('./routes/reviews')
 const userRoute = require('./routes/userRoute')
+const donationRoute = require('./routes/donation')
 
 // For connect flash must follow this secuencial order-- accor. to doc pass.. initialize will be after session as bellow
 app.use(session({
@@ -87,6 +99,8 @@ app.use(methodOverride("_method"));
 app.use('/', userRoute);
 app.use('/campgrounds', campgroundsRoute)
 app.use('/campgrounds/:id/reviews', reviewsRoute)
+app.use('/donation', donationRoute)
+
 
 const sessionconfig = {
   secret: 'High_secrete',
@@ -105,6 +119,27 @@ else{
 res.redirect("/login")
 }
 }
+
+//razorpay
+app.post("/api/payment/verify",(req,res)=>{
+
+  let body=req.body.response.razorpay_order_id + "|" + req.body.response.razorpay_payment_id;
+ 
+   var crypto = require("crypto");
+   var expectedSignature = crypto.createHmac('sha256', '7ZCezd6WzC55NKyZgePAjWER')
+                                   .update(body.toString())
+                                   .digest('hex');
+                                   console.log("sig received " ,req.body.response.razorpay_signature);
+                                   console.log("sig generated " ,expectedSignature);
+   var response = {"signatureIsValid":"false"}
+   if(expectedSignature === req.body.response.razorpay_signature)
+    response={"signatureIsValid":"true"}
+       res.send(response);
+   });
+
+
+
+
 
 // Logout
 app.post('/logout', (req, res) => {
@@ -127,7 +162,7 @@ app.get("/", isAuth, (req, res) => {
 //   next(new ExpressError("Page Not Found", 404));
 // });
 
-// // default error handler..
+// // // default error handler..
 // app.use((err, req, res, next) => {
 //   const { statusCode = 500 } = err;
 //   if (!err.message) err.message = "Saomething Went Wrong";
