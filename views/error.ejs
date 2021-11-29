@@ -4,9 +4,9 @@
         <div class="col-6 offset-3">
             <div class="alert alert-danger" role="alert">
                 <h4 class="alert-heading"><%= err.message%> </h4>
-                A simple danger alert—check it out!
-                <hr>
-                <p class="mb-0">Insert correct information</p>
+            <% if (process.env.NODE_ENV === "development") {%>
+                <p><% err.stack %> </p> 
+                <% } %> 
             </div>
         </div>
     </div>
