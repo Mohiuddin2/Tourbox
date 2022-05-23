@@ -1,21 +1,21 @@
-const Review = require("../models/review");
-const Campground = require("../models/campground");
+const Campground = require('../models/campground');
+const Review = require('../models/review');
 
-module.exports.createReveiw =async(req, res) => {
+module.exports.createReview = async (req, res) => {
     const campground = await Campground.findById(req.params.id);
     const review = new Review(req.body.review);
-    review.author = req.user.id; // for saving/detecting current user
-    campground.reviews.push(review)
-    await campground.save();
+    review.author = req.user._id;
+    campground.reviews.push(review);
     await review.save();
-    req.flash('success', 'Review Created')
-    res.redirect(`/campgrounds/${campground._id}`)
-  }
+    await campground.save();
+    req.flash('success', 'Created new review!');
+    res.redirect(`/campgrounds/${campground._id}`);
+}
 
-  module.exports.reviewDelete  = async(req, res) =>{
-    const {id, reviewId } = req.params;
-    await Campground.findByIdAndUpdate(id, {$pull: {reviews: reviewId}})
-    await Review.findByIdAndDelete(reviewId)
-    req.flash('success', 'Review Deleted!')
-    res.redirect(`/campgrounds/${id}`)
-  }
+module.exports.deleteReview = async (req, res) => {
+    const { id, reviewId } = req.params;
+    await Campground.findByIdAndUpdate(id, { $pull: { reviews: reviewId } });
+    await Review.findByIdAndDelete(reviewId);
+    req.flash('success', 'Successfully deleted review')
+    res.redirect(`/campgrounds/${id}`);
+}

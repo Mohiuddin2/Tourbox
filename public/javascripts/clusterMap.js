@@ -1,12 +1,12 @@
 // TO MAKE THE MAP APPEAR YOU MUST
 // ADD YOUR ACCESS TOKEN FROM
 // https://account.mapbox.com
-mapboxgl.accessToken = mapboxToken;
+mapboxgl.accessToken = mapToken;
 const map = new mapboxgl.Map({
   container: "cluster-map",
   style: "mapbox://styles/mapbox/dark-v10",
-  center: [-103.5917, 40.6699],
-  zoom: 3,
+  center: [91.7832, 22.3569],
+  zoom: 6,
 });
 
 // Add zoom and rotation controls to the map.
@@ -74,7 +74,7 @@ map.on("load", () => {
     filter: ["!", ["has", "point_count"]],
     paint: {
       "circle-color": "#11b4da",
-      "circle-radius": 14,
+      "circle-radius": 12,
       "circle-stroke-width": 1,
       "circle-stroke-color": "#fff",
     },
@@ -103,7 +103,7 @@ map.on("load", () => {
   // the location of the feature, with
   // description HTML from its properties.
   map.on("click", "unclustered-point", (e) => {
-   const {popUpMarkup} = e.features[0].properties;
+    const { popUpMarkup } = e.features[0].properties;
     const coordinates = e.features[0].geometry.coordinates.slice();
     // const mag = e.features[0].properties.mag;
     // const tsunami = e.features[0].properties.tsunami === 1 ? "yes" : "no";
@@ -113,10 +113,7 @@ map.on("load", () => {
     while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
       coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
     }
-new mapboxgl.Popup()
-      .setLngLat(coordinates)
-      .setHTML(popUpMarkup)
-      .addTo(map);
+    new mapboxgl.Popup().setLngLat(coordinates).setHTML(popUpMarkup).addTo(map);
   });
 
   map.on("mouseenter", "clusters", () => {
